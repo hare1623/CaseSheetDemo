@@ -436,48 +436,29 @@ def build_pdf(path: Path, sheet: dict, doctor: str, date: str, transcript: str):
             ("BOTTOMPADDING", (0,0), (-1,-1), 0),
         ]))
         content = personal_rows(sheet.get(key)) if key == "personalHistory" else value_paragraph(sheet.get(key))
-        return [KeepTogether([heading] + content + [Spacer(1, 3*mm)])]
+        # Allow normal page flow; nested KeepTogether blocks can overflow ReportLab table cells.
+        return [heading] + content + [Spacer(1, 3*mm)]
 
     def two_column(left_section, right_section):
-        left = section(*left_section)
-        right = section(*right_section)
-        # A ReportLab table cell must contain a Flowable, not a Python list.
-        # section() returns a one-item list containing a KeepTogether Flowable.
-        left_box = Table([[left[0]]], colWidths=[85*mm], hAlign="LEFT")
-        right_box = Table([[right[0]]], colWidths=[85*mm], hAlign="LEFT")
-        for box in (left_box, right_box):
-            box.setStyle(TableStyle([
-                ("VALIGN", (0,0), (-1,-1), "TOP"),
-                ("LEFTPADDING", (0,0), (-1,-1), 0),
-                ("RIGHTPADDING", (0,0), (-1,-1), 0),
-                ("TOPPADDING", (0,0), (-1,-1), 0),
-                ("BOTTOMPADDING", (0,0), (-1,-1), 0),
-            ]))
-        row = Table([[left_box, right_box]], colWidths=[89*mm, 89*mm], hAlign="LEFT")
-        row.setStyle(TableStyle([
-            ("VALIGN", (0,0), (-1,-1), "TOP"),
-            ("LEFTPADDING", (0,0), (-1,-1), 0),
-            ("RIGHTPADDING", (0,0), (-1,-1), 2*mm),
-            ("TOPPADDING", (0,0), (-1,-1), 0),
-            ("BOTTOMPADDING", (0,0), (-1,-1), 0),
-        ]))
-        return row
+        # Use sequential flowables instead of nested tables: table cells cannot
+        # split naturally across pages when a section becomes long.
+        return section(*left_section) + section(*right_section)
 
     # Page 1: match the reference's editorial layout and paired sections.
     story += section(1, "chiefComplaints", "Chief complaints")
     story += section(2, "historyOfPresentIllness", "History of present illness")
-    story += [two_column(
+    story += two_column(
         (3, "pastMedicalHistory", "Past medical history"),
         (4, "pastSurgicalHistory", "Past surgical history")
-    ), Spacer(1, 3*mm)]
-    story += [two_column(
+    ) + [Spacer(1, 3*mm)]
+    story += two_column(
         (5, "medicationHistory", "Medications"),
         (6, "allergies", "Allergies")
-    ), Spacer(1, 3*mm)]
-    story += [two_column(
+    ) + [Spacer(1, 3*mm)]
+    story += two_column(
         (7, "familyHistory", "Family history"),
         (8, "personalHistory", "Personal history")
-    ), Spacer(1, 3*mm)]
+    ) + [Spacer(1, 3*mm)]
     story += section(9, "reviewOfSystems", "Review of systems")
 
     # Page 2 intentionally mirrors the supplied sample: only sections 10–12.
