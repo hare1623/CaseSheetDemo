@@ -441,8 +441,10 @@ def build_pdf(path: Path, sheet: dict, doctor: str, date: str, transcript: str):
     def two_column(left_section, right_section):
         left = section(*left_section)
         right = section(*right_section)
-        left_box = Table([[left]], colWidths=[85*mm], hAlign="LEFT")
-        right_box = Table([[right]], colWidths=[85*mm], hAlign="LEFT")
+        # A ReportLab table cell must contain a Flowable, not a Python list.
+        # section() returns a one-item list containing a KeepTogether Flowable.
+        left_box = Table([[left[0]]], colWidths=[85*mm], hAlign="LEFT")
+        right_box = Table([[right[0]]], colWidths=[85*mm], hAlign="LEFT")
         for box in (left_box, right_box):
             box.setStyle(TableStyle([
                 ("VALIGN", (0,0), (-1,-1), "TOP"),
