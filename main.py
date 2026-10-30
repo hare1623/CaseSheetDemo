@@ -353,7 +353,7 @@ def build_pdf(path: Path, sheet: dict, doctor: str, date: str, transcript: str):
             Paragraph(value_text, styles["CaseMetaValue"])
         ])
     meta_table = Table(
-        [[Table(cell, colWidths=[54*mm], style=TableStyle([
+        [[Table([[item] for item in cell], colWidths=[54*mm], style=TableStyle([
             ("LEFTPADDING", (0,0), (-1,-1), 0),
             ("RIGHTPADDING", (0,0), (-1,-1), 4),
             ("TOPPADDING", (0,0), (-1,-1), 0),
