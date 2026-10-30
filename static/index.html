@@ -84,6 +84,26 @@ footer{text-align:center;color:#83918a;font:10px "DM Mono",monospace;letter-spac
 <footer>SCRIBE · A STUDENT DEMONSTRATION PROTOTYPE · NOT FOR CLINICAL USE</footer>
 <script>
 const $=id=>document.getElementById(id);let recorder=null,chunks=[],recordedBlob=null,stream=null;
+// Keep the case-sheet panel at least 80% as tall as the consultation card,
+// while respecting the available viewport height so its own scrollbar still works.
+function syncCaseSheetMinHeight(){
+  const layout=document.querySelector(".layout");
+  const consultation=layout?.children[0];
+  const caseSheet=layout?.children[1];
+  if(!consultation||!caseSheet||window.matchMedia("(max-width: 760px)").matches){
+    if(caseSheet)caseSheet.style.minHeight="";
+    return;
+  }
+  const maxHeight=Math.max(0,window.innerHeight-270);
+  const targetHeight=Math.min(Math.round(consultation.getBoundingClientRect().height*0.8),maxHeight);
+  caseSheet.style.minHeight=targetHeight+"px";
+}
+window.addEventListener("resize",syncCaseSheetMinHeight);
+if("ResizeObserver" in window){
+  const consultationCard=document.querySelector(".layout")?.children[0];
+  if(consultationCard)new ResizeObserver(syncCaseSheetMinHeight).observe(consultationCard);
+}
+window.addEventListener("load",syncCaseSheetMinHeight);
 $("date").value=new Date().toISOString().slice(0,10);
 function setStatus(message,error=false){$("status").textContent=message;$("status").classList.toggle("error",error)}
 $("startBtn").addEventListener("click",async()=>{try{if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder){setStatus("Recording is not supported in this browser. Upload an audio file instead.",true);return}stream=await navigator.mediaDevices.getUserMedia({audio:true});chunks=[];const mime=MediaRecorder.isTypeSupported("audio/webm;codecs=opus")?"audio/webm;codecs=opus":"";recorder=new MediaRecorder(stream,mime?{mimeType:mime}:undefined);recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};recorder.onstop=()=>{recordedBlob=new Blob(chunks,{type:recorder.mimeType||"audio/webm"});$("preview").src=URL.createObjectURL(recordedBlob);$("preview").hidden=false;$("recordStatus").textContent="Recording ready ("+(recordedBlob.size/1024/1024).toFixed(2)+" MB).";stream?.getTracks().forEach(t=>t.stop())};recorder.start();$("startBtn").disabled=true;$("stopBtn").disabled=false;$("recordStatus").textContent="Recording… speak naturally and include both sides of the simulated consultation.";setStatus("Recording in progress. Select Stop when finished.")}catch(e){setStatus("Microphone access failed. Allow microphone permission or upload an audio file. "+e.message,true)}});
