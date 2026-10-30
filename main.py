@@ -251,61 +251,246 @@ def list_text(items):
 
 
 def build_pdf(path: Path, sheet: dict, doctor: str, date: str, transcript: str):
+    """Render the downloadable PDF in the supplied Scribe sample style.
+    The web UI, API response, extraction schema, and generation flow are unchanged.
+    """
+    from reportlab.platypus import PageBreak
+
     styles = getSampleStyleSheet()
-    styles.add(ParagraphStyle(name="ScribeTitle", parent=styles["Title"], fontName="Times-Bold", fontSize=24, leading=28, alignment=TA_CENTER, textColor=colors.HexColor("#063f3a"), spaceAfter=4))
-    styles.add(ParagraphStyle(name="ScribeSub", parent=styles["Normal"], fontSize=8, leading=11, alignment=TA_CENTER, textColor=colors.HexColor("#5d7773"), spaceAfter=12))
-    styles.add(ParagraphStyle(name="ScribeSection", parent=styles["Heading3"], fontName="Helvetica-Bold", fontSize=10, leading=13, textColor=colors.HexColor("#076f65"), spaceBefore=8, spaceAfter=4, keepWithNext=True))
-    styles.add(ParagraphStyle(name="ScribeBody", parent=styles["BodyText"], fontSize=9, leading=13, textColor=colors.HexColor("#263d3b"), spaceAfter=4))
-    styles.add(ParagraphStyle(name="ScribeSmall", parent=styles["BodyText"], fontSize=8, leading=11, textColor=colors.HexColor("#60716e"), spaceAfter=3))
-    doc = SimpleDocTemplate(str(path), pagesize=A4, rightMargin=18*mm, leftMargin=18*mm, topMargin=15*mm, bottomMargin=15*mm)
+    ink = colors.HexColor("#102f2d")
+    muted = colors.HexColor("#667875")
+    teal = colors.HexColor("#16766d")
+    rule = colors.HexColor("#d9dfd9")
+
+    styles.add(ParagraphStyle(
+        name="CaseKicker", parent=styles["Normal"], fontName="Helvetica",
+        fontSize=7.5, leading=10, textColor=muted, tracking=2.2,
+        spaceAfter=5
+    ))
+    styles.add(ParagraphStyle(
+        name="CaseName", parent=styles["Title"], fontName="Times-Bold",
+        fontSize=22, leading=25, alignment=0, textColor=ink,
+        spaceBefore=0, spaceAfter=10
+    ))
+    styles.add(ParagraphStyle(
+        name="CaseMetaLabel", parent=styles["Normal"], fontName="Helvetica",
+        fontSize=7, leading=9, textColor=muted, tracking=1.5,
+        spaceAfter=2
+    ))
+    styles.add(ParagraphStyle(
+        name="CaseMetaValue", parent=styles["Normal"], fontName="Helvetica",
+        fontSize=9, leading=12, textColor=ink, spaceAfter=0
+    ))
+    styles.add(ParagraphStyle(
+        name="CaseSection", parent=styles["Normal"], fontName="Times-Bold",
+        fontSize=13, leading=16, textColor=ink, spaceBefore=0, spaceAfter=6
+    ))
+    styles.add(ParagraphStyle(
+        name="CaseBody", parent=styles["BodyText"], fontName="Helvetica",
+        fontSize=8.5, leading=12.5, textColor=colors.HexColor("#243b39"),
+        spaceAfter=3
+    ))
+    styles.add(ParagraphStyle(
+        name="CaseBullet", parent=styles["BodyText"], fontName="Helvetica",
+        fontSize=8.5, leading=12.5, leftIndent=10, firstLineIndent=-7,
+        bulletIndent=0, textColor=colors.HexColor("#243b39"), spaceAfter=4
+    ))
+    styles.add(ParagraphStyle(
+        name="CaseMissing", parent=styles["BodyText"], fontName="Helvetica-Oblique",
+        fontSize=8.5, leading=12.5, textColor=muted, spaceAfter=3
+    ))
+    styles.add(ParagraphStyle(
+        name="CasePersonalLabel", parent=styles["Normal"], fontName="Helvetica",
+        fontSize=8, leading=11, textColor=muted
+    ))
+    styles.add(ParagraphStyle(
+        name="CasePersonalValue", parent=styles["Normal"], fontName="Helvetica",
+        fontSize=8, leading=11, textColor=ink
+    ))
+
+    doc = SimpleDocTemplate(
+        str(path), pagesize=A4,
+        rightMargin=16*mm, leftMargin=16*mm,
+        topMargin=17*mm, bottomMargin=16*mm,
+        title="Scribe — AI case sheet from consultation",
+        author="Scribe"
+    )
+
+    def on_page(canvas, document):
+        canvas.saveState()
+        page_w, page_h = A4
+        canvas.setFont("Helvetica", 7)
+        canvas.setFillColor(muted)
+        stamp = date.strip() if date and date.strip() else datetime.now().strftime("%d/%m/%y")
+        canvas.drawString(16*mm, page_h - 9*mm, escape(stamp))
+        canvas.drawCentredString(page_w / 2, page_h - 9*mm, "Scribe — AI case sheets from consultations")
+        canvas.setStrokeColor(rule)
+        canvas.setLineWidth(0.5)
+        canvas.line(16*mm, 12*mm, page_w - 16*mm, 12*mm)
+        canvas.setFont("Helvetica", 7)
+        canvas.setFillColor(muted)
+        canvas.drawRightString(page_w - 16*mm, 7.5*mm, f"{document.page}")
+        canvas.restoreState()
+
+    patient = sheet.get("patient") or {}
+    patient_name = (patient.get("name") or "").strip() or "Patient name not stated"
     story = [
-        Paragraph("Scribe", styles["ScribeTitle"]),
-        Paragraph("CLINICAL CASE SHEET · AI-GENERATED DRAFT", styles["ScribeSub"])
+        Spacer(1, 2*mm),
+        Paragraph("C A S E   S H E E T", styles["CaseKicker"]),
+        Paragraph(safe(patient_name), styles["CaseName"]),
     ]
 
-    patient = sheet.get("patient", {})
-    demographics = [
-        [Paragraph("<b>Patient name</b>", styles["ScribeBody"]), Paragraph(safe(patient.get("name")), styles["ScribeBody"]),
-         Paragraph("<b>Age / Sex</b>", styles["ScribeBody"]), Paragraph(safe(patient.get("age")) + " / " + safe(patient.get("sex")), styles["ScribeBody"])],
-        [Paragraph("<b>Occupation</b>", styles["ScribeBody"]), Paragraph(safe(patient.get("occupation")), styles["ScribeBody"]),
-         Paragraph("<b>Date</b>", styles["ScribeBody"]), Paragraph(safe(date or datetime.now().strftime("%Y-%m-%d")), styles["ScribeBody"])],
-        [Paragraph("<b>Doctor</b>", styles["ScribeBody"]), Paragraph(safe(doctor), styles["ScribeBody"]), "", ""]
+    meta_items = [
+        ("AGE", patient.get("age")),
+        ("SEX", patient.get("sex")),
+        ("OCCUPATION", patient.get("occupation")),
     ]
-    table = Table(demographics, colWidths=[25*mm, 56*mm, 22*mm, 61*mm], hAlign="LEFT")
-    table.setStyle(TableStyle([
-        ("BACKGROUND", (0,0), (-1,-1), colors.HexColor("#f0f5f0")),
-        ("GRID", (0,0), (-1,-1), .35, colors.HexColor("#d5e2dc")),
+    meta_cells = []
+    for label, value in meta_items:
+        value_text = safe(value) if value and str(value).strip() else "—"
+        meta_cells.append([
+            Paragraph(label, styles["CaseMetaLabel"]),
+            Paragraph(value_text, styles["CaseMetaValue"])
+        ])
+    meta_table = Table(
+        [[Table(cell, colWidths=[54*mm], style=TableStyle([
+            ("LEFTPADDING", (0,0), (-1,-1), 0),
+            ("RIGHTPADDING", (0,0), (-1,-1), 4),
+            ("TOPPADDING", (0,0), (-1,-1), 0),
+            ("BOTTOMPADDING", (0,0), (-1,-1), 0),
+        ])) for cell in meta_cells]],
+        colWidths=[57*mm, 57*mm, 57*mm],
+        hAlign="LEFT"
+    )
+    meta_table.setStyle(TableStyle([
         ("VALIGN", (0,0), (-1,-1), "TOP"),
-        ("SPAN", (1,2), (3,2)),
-        ("LEFTPADDING", (0,0), (-1,-1), 6), ("RIGHTPADDING", (0,0), (-1,-1), 6),
-        ("TOPPADDING", (0,0), (-1,-1), 5), ("BOTTOMPADDING", (0,0), (-1,-1), 5)
+        ("LEFTPADDING", (0,0), (-1,-1), 0),
+        ("RIGHTPADDING", (0,0), (-1,-1), 0),
+        ("TOPPADDING", (0,0), (-1,-1), 2),
+        ("BOTTOMPADDING", (0,0), (-1,-1), 7),
     ]))
-    story += [table, Spacer(1, 7)]
+    story += [meta_table, Spacer(1, 3*mm)]
 
-    for key, label in SECTION_LABELS:
-        value = sheet.get(key)
-        if key == "chiefComplaints":
-            value = "<br/>".join(
-                "• " + safe(item.get("complaint", "")) + ((" — " + safe(item.get("duration"))) if item.get("duration") else "")
-                for item in (value or [])
-            ) or "—"
-        elif key == "personalHistory":
-            personal = value or {}
-            labels = [("Diet", "diet"), ("Appetite", "appetite"), ("Sleep", "sleep"),
-                      ("Bowel / bladder", "bowelBladder"), ("Smoking", "smoking"),
-                      ("Alcohol", "alcohol"), ("Other", "other")]
-            value = "<br/>".join("<b>" + label_ + ":</b> " + safe(personal.get(field)) for label_, field in labels)
-        elif isinstance(value, list):
-            value = list_text(value)
-        else:
-            value = safe(value)
-        story.append(KeepTogether([Paragraph(escape(label), styles["ScribeSection"]), Paragraph(value, styles["ScribeBody"])]))
+    divider = Table([[""]], colWidths=[178*mm], rowHeights=[0.4])
+    divider.setStyle(TableStyle([("BACKGROUND", (0,0), (-1,-1), rule)]))
+    story += [divider, Spacer(1, 7*mm)]
+
+    def value_paragraph(value):
+        if value is None or (isinstance(value, str) and not value.strip()):
+            return [Paragraph("Not mentioned", styles["CaseMissing"])]
+        if isinstance(value, list):
+            if not value:
+                return [Paragraph("Not mentioned", styles["CaseMissing"])]
+            output = []
+            for item in value:
+                if isinstance(item, dict):
+                    complaint = item.get("complaint") or ""
+                    duration = item.get("duration")
+                    text_value = safe(complaint)
+                    if duration and str(duration).strip():
+                        text_value += " — " + safe(duration)
+                else:
+                    text_value = safe(item)
+                output.append(Paragraph("• " + text_value, styles["CaseBullet"]))
+            return output
+        text_value = str(value).strip()
+        if not text_value:
+            return [Paragraph("Not mentioned", styles["CaseMissing"])]
+        return [Paragraph(safe(text_value), styles["CaseBody"])]
+
+    def personal_rows(value):
+        value = value or {}
+        pairs = [
+            ("Diet", "diet"), ("Appetite", "appetite"), ("Sleep", "sleep"),
+            ("Bowel/Bladder", "bowelBladder"), ("Smoking", "smoking"),
+            ("Alcohol", "alcohol"), ("Other", "other")
+        ]
+        rows = []
+        for label, key in pairs:
+            item = value.get(key)
+            missing = item is None or not str(item).strip()
+            rows.append([
+                Paragraph(label, styles["CasePersonalLabel"]),
+                Paragraph("—" if missing else safe(item), styles["CasePersonalValue"])
+            ])
+        table = Table(rows, colWidths=[29*mm, 52*mm], hAlign="LEFT")
+        table.setStyle(TableStyle([
+            ("VALIGN", (0,0), (-1,-1), "TOP"),
+            ("LEFTPADDING", (0,0), (-1,-1), 0),
+            ("RIGHTPADDING", (0,0), (-1,-1), 3),
+            ("TOPPADDING", (0,0), (-1,-1), 2),
+            ("BOTTOMPADDING", (0,0), (-1,-1), 2),
+        ]))
+        return [table]
+
+    def section(number, key, title):
+        heading = Table([[
+            Paragraph(f'<font color="#16766d">{number:02d}</font>', styles["CaseMetaValue"]),
+            Paragraph(escape(title), styles["CaseSection"])
+        ]], colWidths=[9*mm, 75*mm], hAlign="LEFT")
+        heading.setStyle(TableStyle([
+            ("VALIGN", (0,0), (-1,-1), "TOP"),
+            ("LEFTPADDING", (0,0), (-1,-1), 0),
+            ("RIGHTPADDING", (0,0), (-1,-1), 2),
+            ("TOPPADDING", (0,0), (-1,-1), 0),
+            ("BOTTOMPADDING", (0,0), (-1,-1), 0),
+        ]))
+        content = personal_rows(sheet.get(key)) if key == "personalHistory" else value_paragraph(sheet.get(key))
+        return [KeepTogether([heading] + content + [Spacer(1, 3*mm)])]
+
+    def two_column(left_section, right_section):
+        left = section(*left_section)
+        right = section(*right_section)
+        left_box = Table([[left]], colWidths=[85*mm], hAlign="LEFT")
+        right_box = Table([[right]], colWidths=[85*mm], hAlign="LEFT")
+        for box in (left_box, right_box):
+            box.setStyle(TableStyle([
+                ("VALIGN", (0,0), (-1,-1), "TOP"),
+                ("LEFTPADDING", (0,0), (-1,-1), 0),
+                ("RIGHTPADDING", (0,0), (-1,-1), 0),
+                ("TOPPADDING", (0,0), (-1,-1), 0),
+                ("BOTTOMPADDING", (0,0), (-1,-1), 0),
+            ]))
+        row = Table([[left_box, right_box]], colWidths=[89*mm, 89*mm], hAlign="LEFT")
+        row.setStyle(TableStyle([
+            ("VALIGN", (0,0), (-1,-1), "TOP"),
+            ("LEFTPADDING", (0,0), (-1,-1), 0),
+            ("RIGHTPADDING", (0,0), (-1,-1), 2*mm),
+            ("TOPPADDING", (0,0), (-1,-1), 0),
+            ("BOTTOMPADDING", (0,0), (-1,-1), 0),
+        ]))
+        return row
+
+    # Page 1: match the reference's editorial layout and paired sections.
+    story += section(1, "chiefComplaints", "Chief complaints")
+    story += section(2, "historyOfPresentIllness", "History of present illness")
+    story += [two_column(
+        (3, "pastMedicalHistory", "Past medical history"),
+        (4, "pastSurgicalHistory", "Past surgical history")
+    ), Spacer(1, 3*mm)]
+    story += [two_column(
+        (5, "medicationHistory", "Medications"),
+        (6, "allergies", "Allergies")
+    ), Spacer(1, 3*mm)]
+    story += [two_column(
+        (7, "familyHistory", "Family history"),
+        (8, "personalHistory", "Personal history")
+    ), Spacer(1, 3*mm)]
+    story += section(9, "reviewOfSystems", "Review of systems")
+
+    # Page 2 intentionally mirrors the supplied sample: only sections 10–12.
+    story.append(PageBreak())
+    story += section(10, "examinationFindings", "Examination findings")
+    story += section(11, "provisionalDiagnosis", "Provisional diagnosis")
+    story += section(12, "plan", "Plan")
 
     story += [
-        Spacer(1, 8),
-        Paragraph("Source transcript", styles["ScribeSection"]),
-        Paragraph(safe(transcript), styles["ScribeSmall"]),
-        Spacer(1, 8),
-        Paragraph("Important: This AI-generated document is a draft for demonstration only. Verify the transcript, all extracted facts, and the clinical interpretation. It must not replace clinician judgment or an approved medical record.", styles["ScribeSmall"])
+        Spacer(1, 5*mm),
+        Paragraph(
+            "Draft for demonstration only. Verify the transcript, extracted facts, "
+            "and clinical interpretation. This document must not replace clinician "
+            "judgment or an approved medical record.",
+            styles["CaseMissing"]
+        )
     ]
-    doc.build(story)
+    doc.build(story, onFirstPage=on_page, onLaterPages=on_page)
