@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CaseSheetDemo — Medical Scribe Prototype</title>
+  <style>
+    :root { color-scheme: light; --ink:#172b3a; --muted:#617181; --line:#dce5ec; --blue:#1769aa; --bg:#f4f7fa; }
+    * { box-sizing:border-box; }
+    body { margin:0; font:15px/1.5 Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif; color:var(--ink); background:var(--bg); }
+    header { background:#fff; border-bottom:1px solid var(--line); padding:18px 24px; display:flex; justify-content:space-between; align-items:center; gap:12px; }
+    .brand { font-weight:800; font-size:20px; letter-spacing:-.3px; }
+    .badge { color:#855b00; background:#fff3ce; border-radius:999px; padding:5px 10px; font-size:12px; font-weight:700; }
+    main { max-width:1100px; margin:28px auto; padding:0 18px 40px; }
+    .intro { margin-bottom:20px; }
+    h1 { font-size:clamp(25px,4vw,34px); margin:0 0 6px; letter-spacing:-.8px; }
+    .muted { color:var(--muted); }
+    .grid { display:grid; grid-template-columns:minmax(280px, .85fr) minmax(320px,1.15fr); gap:18px; align-items:start; }
+    .card { background:#fff; border:1px solid var(--line); border-radius:16px; padding:22px; box-shadow:0 4px 18px #172b3a08; }
+    h2 { margin:0 0 15px; font-size:18px; }
+    label { display:block; font-weight:650; font-size:13px; margin:13px 0 5px; }
+    input, textarea { width:100%; border:1px solid #cbd7e0; border-radius:9px; padding:10px 11px; font:inherit; background:white; }
+    input:focus, textarea:focus { outline:2px solid #b9ddf8; border-color:var(--blue); }
+    .row { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    button, .download { border:0; border-radius:9px; padding:11px 14px; font:inherit; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; text-decoration:none; }
+    button:disabled { opacity:.55; cursor:wait; }
+    .primary { background:var(--blue); color:white; width:100%; margin-top:14px; }
+    .secondary { color:var(--blue); background:#eaf4fc; border:1px solid #d4e8f8; }
+    .danger { color:#a52323; background:#fff0f0; border:1px solid #f1d1d1; }
+    .recordbox { border:1px dashed #b9c8d4; border-radius:12px; padding:15px; margin-top:14px; background:#f9fbfd; }
+    .actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+    .status { margin-top:12px; padding:10px 12px; background:#f1f6fa; border-radius:9px; font-size:13px; white-space:pre-wrap; }
+    .status.error { color:#9e2525; background:#fff0f0; }
+    .notice { margin-top:16px; padding:12px; border-left:3px solid #e2ae35; background:#fff8e6; color:#644a12; border-radius:4px 8px 8px 4px; font-size:13px; }
+    .result { display:none; }
+    .result h3 { font-size:15px; margin:18px 0 6px; }
+    .transcript, .note { white-space:pre-wrap; overflow-wrap:anywhere; border:1px solid var(--line); background:#fbfcfd; border-radius:10px; padding:13px; max-height:360px; overflow:auto; font-size:13px; }
+    .download { margin-top:12px; color:white; background:#17734a; }
+    footer { text-align:center; color:var(--muted); font-size:12px; padding:18px; }
+    @media (max-width:760px) { .grid { grid-template-columns:1fr; } header { padding:15px 18px; } .badge { max-width:150px; text-align:center; } }
+  </style>
+</head>
+<body>
+<header>
+  <div class="brand">🩺 CaseSheetDemo</div>
+  <div class="badge">Prototype · Not for clinical use</div>
+</header>
+<main>
+  <section class="intro">
+    <h1>Conversation to case sheet</h1>
+    <div class="muted">Record a simulated doctor–patient conversation or upload an existing audio file. Generate a transcript and a draft clinical note PDF.</div>
+  </section>
+  <div class="grid">
+    <section class="card">
+      <h2>1. Consultation details</h2>
+      <form id="caseForm">
+        <label for="patient">Patient name (optional)</label>
+        <input id="patient" name="patient_name" placeholder="Demo Patient" maxlength="100" />
+        <div class="row">
+          <div><label for="age">Age (optional)</label><input id="age" name="patient_age" placeholder="e.g. 42" maxlength="20" /></div>
+          <div><label for="date">Consultation date</label><input id="date" name="consultation_date" type="date" /></div>
+        </div>
+        <label for="doctor">Doctor name (optional)</label>
+        <input id="doctor" name="doctor_name" placeholder="Dr. Example" maxlength="100" />
+        <div class="recordbox">
+          <strong>Record in browser</strong>
+          <p class="muted" style="font-size:13px;margin:4px 0 8px">Allow microphone access, then record both sides of a simulated conversation. Keep this page open while recording.</p>
+          <div class="actions">
+            <button type="button" class="secondary" id="startBtn">● Start recording</button>
+            <button type="button" class="danger" id="stopBtn" disabled>■ Stop</button>
+          </div>
+          <div id="recordStatus" class="muted" style="font-size:13px;margin-top:8px">No recording yet.</div>
+          <audio id="preview" controls style="display:none;width:100%;margin-top:10px"></audio>
+        </div>
+        <label for="audioFile">Or upload audio</label>
+        <input id="audioFile" type="file" accept="audio/*,.webm,.wav,.mp3,.m4a,.mp4" />
+        <div class="muted" style="font-size:12px;margin-top:5px">Maximum upload: 25 MB. Clear audio works best.</div>
+        <button id="generateBtn" class="primary" type="submit">Generate draft case sheet</button>
+      </form>
+      <div id="status" class="status" role="status">Ready. Use a fictional or consented test recording.</div>
+      <div class="notice"><strong>Privacy & safety:</strong> Use synthetic/consented recordings only. This is a demo, not a medical device or EHR. A clinician must verify every detail before clinical use.</div>
+    </section>
+    <section class="card">
+      <h2>2. Generated output</h2>
+      <div id="emptyState" class="muted">Your transcript, AI-generated draft note, and PDF link will appear here after processing.</div>
+      <div id="result" class="result">
+        <div class="notice" style="margin-top:0">AI-generated draft — clinician review required.</div>
+        <h3>Transcript</h3>
+        <div id="transcript" class="transcript"></div>
+        <h3>Draft clinical note</h3>
+        <div id="note" class="note"></div>
+        <a id="download" class="download" href="#" target="_blank" rel="noopener">Download case sheet PDF</a>
+      </div>
+    </section>
+  </div>
+</main>
+<footer>CaseSheetDemo · Test with non-identifiable sample data only</footer>
+<script>
+  const $ = (id) => document.getElementById(id);
+  let recorder = null, chunks = [], recordedBlob = null, stream = null;
+  $("date").value = new Date().toISOString().slice(0, 10);
+
+  function setStatus(message, error=false) {
+    $("status").textContent = message;
+    $("status").classList.toggle("error", error);
+  }
+
+  $("startBtn").addEventListener("click", async () => {
+    try {
+      if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
+        setStatus("Recording is not supported in this browser. Upload an audio file instead.", true); return;
+      }
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      chunks = [];
+      const mime = MediaRecorder.isTypeSupported("audio/webm;codecs=opus") ? "audio/webm;codecs=opus" : "";
+      recorder = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+      recorder.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
+      recorder.onstop = () => {
+        recordedBlob = new Blob(chunks, { type: recorder.mimeType || "audio/webm" });
+        $("preview").src = URL.createObjectURL(recordedBlob);
+        $("preview").style.display = "block";
+        $("recordStatus").textContent = `Recording ready (${(recordedBlob.size / 1024 / 1024).toFixed(2)} MB).`;
+        stream?.getTracks().forEach(t => t.stop());
+      };
+      recorder.start();
+      $("startBtn").disabled = true; $("stopBtn").disabled = false;
+      $("recordStatus").textContent = "Recording… Speak naturally and include both sides of the simulated consultation.";
+      setStatus("Recording in progress. Select Stop when finished.");
+    } catch (e) {
+      setStatus("Microphone access failed. Allow microphone permission or upload an audio file. " + e.message, true);
+    }
+  });
+
+  $("stopBtn").addEventListener("click", () => {
+    if (recorder && recorder.state !== "inactive") recorder.stop();
+    $("startBtn").disabled = false; $("stopBtn").disabled = true;
+  });
+
+  $("caseForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const chosenFile = $("audioFile").files[0];
+    let audioFile = chosenFile;
+    if (!audioFile && recordedBlob) {
+      const ext = recordedBlob.type.includes("mp4") ? "m4a" : "webm";
+      audioFile = new File([recordedBlob], `consultation.${ext}`, { type: recordedBlob.type || "audio/webm" });
+    }
+    if (!audioFile) { setStatus("Record a consultation or choose an audio file first.", true); return; }
+    if (audioFile.size > 25 * 1024 * 1024) { setStatus("File is larger than 25 MB. Please use a shorter recording.", true); return; }
+
+    const form = new FormData();
+    form.append("audio", audioFile);
+    form.append("patient_name", $("patient").value);
+    form.append("patient_age", $("age").value);
+    form.append("doctor_name", $("doctor").value);
+    form.append("consultation_date", $("date").value);
+    $("generateBtn").disabled = true;
+    $("generateBtn").textContent = "Processing audio…";
+    setStatus("Uploading audio, transcribing speech, and drafting the case sheet. This may take a little while.");
+    $("emptyState").style.display = "block"; $("result").style.display = "none";
+    try {
+      const res = await fetch("/api/casesheet", { method: "POST", body: form });
+      const payload = await res.json();
+      if (!res.ok) throw new Error(payload.detail || "Request failed");
+      $("transcript").textContent = payload.transcript;
+      $("note").textContent = payload.note;
+      $("download").href = payload.pdf_url;
+      $("result").style.display = "block"; $("emptyState").style.display = "none";
+      setStatus(payload.message);
+    } catch (err) {
+      setStatus("Could not generate the case sheet: " + err.message, true);
+    } finally {
+      $("generateBtn").disabled = false;
+      $("generateBtn").textContent = "Generate draft case sheet";
+    }
+  });
+</script>
+</body>
+</html>

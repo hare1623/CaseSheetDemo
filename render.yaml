@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: casesheetdemo
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_TRANSCRIPTION_MODEL
+        value: gpt-4o-mini-transcribe
+      - key: OPENAI_NOTE_MODEL
+        value: gpt-4o-mini
+      - key: MAX_UPLOAD_MB
+        value: "25"
