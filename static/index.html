@@ -19,12 +19,17 @@ h1{font:500 clamp(36px,5vw,54px)/1.13 "Playfair Display",serif;letter-spacing:-.
 h1 em{display:block;color:var(--teal);font-weight:500;margin-top:3px}
 .lead{max-width:510px;margin:0 auto;color:#657b79;font-size:16px}
 .layout{display:grid;grid-template-columns:minmax(0, .9fr) minmax(0,1.1fr);gap:20px;align-items:start}
+/* Keep the generated case sheet in its own scroll area on desktop. */
+@media(min-width:761px){.layout{align-items:start}.layout>.card:nth-child(2){position:sticky;top:16px;max-height:calc(100vh - 270px);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#b8cbc2 transparent}.layout>.card:nth-child(2)::-webkit-scrollbar{width:7px}.layout>.card:nth-child(2)::-webkit-scrollbar-thumb{background:#b8cbc2;border-radius:10px}.layout>.card:nth-child(2)::-webkit-scrollbar-track{background:transparent}}
 .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:23px;box-shadow:0 10px 30px #123b2e08}
 .card-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
 h2{font:500 23px "Playfair Display",serif;margin:0}.step{font:10px "DM Mono",monospace;letter-spacing:.12em;color:#78908b}
 label{display:block;font-size:12px;font-weight:700;color:#34524e;margin:13px 0 5px}
 input,select{width:100%;padding:11px 12px;border:1px solid #d9ded5;border-radius:9px;background:#fffefa;color:var(--ink);font:14px "DM Sans",sans-serif;outline:none}
 input:focus,select:focus{border-color:#64a89c;box-shadow:0 0 0 3px #08766b14}
+select{appearance:none;-webkit-appearance:none;cursor:pointer;padding-right:42px;background-image:url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2716%27 height=%2716%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27%2308766b%27 stroke-width=%272%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3E%3Cpath d=%27m6 9 6 6 6-6%27/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 13px center}
+select option{background:#fffefa;color:var(--ink);font-family:"DM Sans",sans-serif}
+select option:checked{background:#e4efea;color:#075e55;font-weight:600}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .record{border:1px solid #d8e4dc;background:#f5f8f3;border-radius:13px;padding:16px;margin-top:16px}
 .record-title{font:500 17px "Playfair Display",serif}.helper{color:var(--muted);font-size:12px;margin:4px 0 12px}
@@ -34,7 +39,7 @@ button:hover,.button-link:hover{transform:translateY(-1px)}button:disabled{opaci
 .primary{background:var(--teal);color:white}.soft{background:#e6f0eb;color:#08665d;border:1px solid #d4e5dc}.stop{background:#f9e9e5;color:#a2463c}
 .record-status{font:11px "DM Mono",monospace;color:#68817b;margin-top:10px}
 audio{width:100%;margin-top:10px;height:38px}
-.upload-label{margin-top:18px}.file-input{font-size:12px;padding:8px}
+.upload-label{margin-top:18px}.file-input{display:block;width:100%;font-size:13px;padding:8px 10px;border:1px solid #d9ded5;border-radius:12px;background:#fffefa;color:var(--muted);cursor:pointer}.file-input::file-selector-button{font:600 13px "DM Sans",sans-serif;color:#08665d;background:#e6f0eb;border:1px solid #d4e5dc;border-radius:8px;padding:9px 13px;margin-right:12px;cursor:pointer;transition:background .15s,border-color .15s}.file-input::file-selector-button:hover{background:#d8e9e0;border-color:#bcd8ca}.file-input:focus-visible{outline:2px solid #64a89c;outline-offset:2px}
 .generate{width:100%;margin-top:17px;padding:15px;background:var(--teal);color:white;font-size:14px}
 .status{margin-top:13px;border-radius:9px;background:#f0f4ed;color:#45615a;padding:11px 12px;font-size:12px;white-space:pre-wrap}
 .status.error{background:#fff0ee;color:#9e3f35}
@@ -46,7 +51,7 @@ audio{width:100%;margin-top:10px;height:38px}
 .download{width:100%;margin-top:16px;background:#173d35;color:#fff;padding:13px}
 .output-actions{display:flex;gap:8px;margin-top:10px}.output-actions button{flex:1}
 footer{text-align:center;color:#83918a;font:10px "DM Mono",monospace;letter-spacing:.04em;padding:20px}
-@media(max-width:760px){header{height:65px;padding:0 18px}.top-note{font-size:9px}main{padding:10px 14px 40px}.hero{padding:30px 0 28px}.layout{grid-template-columns:1fr}.card{padding:18px}.lead{font-size:14px}}
+@media(max-width:760px){header{height:65px;padding:0 18px}.top-note{font-size:9px}main{padding:10px 14px 40px}.hero{padding:30px 0 28px}.layout{grid-template-columns:1fr}.card{padding:18px}.lead{font-size:14px}.layout>.card:nth-child(2){position:static;max-height:none;overflow:visible}}
 </style>
 </head>
 <body>
